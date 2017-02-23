@@ -62,7 +62,7 @@ for file_d in files:
 
             p = ByteArray(decompressed)
             
-            while len(decompressed[i:]) > 5:
+            while len(p.toByteArray()[i:]) > 5:
                 fileType = p.readByte()
                 fileSize = p.readUnsignedInt()
                 
