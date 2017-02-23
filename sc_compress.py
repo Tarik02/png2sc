@@ -1,4 +1,5 @@
 # coding: utf-8
+# Author: Xset
 
 import os
 import struct
