@@ -1,6 +1,6 @@
 # coding: utf-8
-# Originan from https://github.com/royale-proxy/
-# Rewrite by Xset
+# Original from https://github.com/royale-proxy/
+# Rewritten by Xset
 
 import sys
 import os
@@ -122,4 +122,5 @@ for file_d in files:
                 _( "Saving as png..." )
                 img.save(folder_export + baseName + ('_' * picCount) + '.png', 'PNG')
                 picCount += 1
-                _( "Saving completed" )
+                _( "Saving completed\n" )
+                break;
