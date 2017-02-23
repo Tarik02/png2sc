@@ -1,4 +1,6 @@
 # coding: utf-8
+# Originan from https://github.com/royale-proxy/
+# Rewrite by Xset
 
 import sys
 import os
