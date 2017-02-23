@@ -91,7 +91,7 @@ for file in toCompile:
             # Add headers
             lzModule = headerBytes + lzModule
 
-            mModule = open('./compiled/' + baseName + '_tex.sc', "wb+")
+            mModule = open('./compiled/' + baseName + '.sc', "wb+")
             mModule.write(lzModule)
             mModule.close()
             _( 'Saving OK...' )            
