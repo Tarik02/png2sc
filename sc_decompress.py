@@ -48,6 +48,7 @@ for file_d in files:
     if file_d.endswith('_tex.sc'):
         with open(folder + file_d, 'rb') as fh:
             data = fh.read()
+            print(data[:26])
             data = data[26:]
             data = data[0:9] + (b'\x00' * 4) + data[9:]
 
@@ -62,13 +63,12 @@ for file_d in files:
 
             p = ByteArray(decompressed)
             
-            while len(p.toByteArray()[i:]) > 5:
-                fileType = p.readByte()
-                fileSize = p.readUnsignedInt()
-                
-                subType = p.readByte()
-                width = p.readUnsignedShort()
-                height = p.readUnsignedShort()
+            while len(decompressed[i:]) > 5:
+                fileType = decompressed[i]
+                fileSize, = struct.unpack('<I', decompressed[i + 1:i + 5])
+                subType = decompressed[i + 5]
+                width, = struct.unpack('<H', decompressed[i + 6:i + 8])
+                height, = struct.unpack('<H', decompressed[i + 8:i + 10])
                 
                 i += 10
                 if subType == 0:
@@ -123,4 +123,3 @@ for file_d in files:
                 img.save(folder_export + baseName + ('_' * picCount) + '.png', 'PNG')
                 picCount += 1
                 _( "Saving completed\n" )
-                break;
