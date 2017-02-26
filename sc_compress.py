@@ -30,9 +30,8 @@ def downloadDB():
     _('Downloading the latest database...')
     response = http.request('GET', 'http://github.com/Xset-s/png2sc/raw/master/PixelData.db')
     database = response.data
-    _('The latest database successfully downloaded.')
-    print('')
-
+    _('The latest database successfully downloaded.' + "\n")
+ 
     dbFile = open("PixelData.db", "wb+")
     dbFile.write(database)
     dbFile.close()
@@ -76,8 +75,7 @@ for file in toCompile:
 
         # Size
         packetSize = ((width) * (height) * BFPXFormat) + 5;
-        _('PacketSize: ' + str(packetSize))
-        print('')
+        _('PacketSize: ' + str(packetSize) + "\n")
 
         # Get data from database
         data = checkAlreadyExists(baseName)
@@ -85,6 +83,12 @@ for file in toCompile:
         if not data is None:
             subType = data[1]
             headerBytes = binascii.unhexlify(data[2])
+        else:
+            _('Sorry, we can\'t find this texture in out database... May be you changed filename?')
+            _('We will use standart subType and headerBytes. (0, None)' + "\n")
+
+            subType = 0
+            headerBytes = b''
             
         # Create new packet
         p = ByteArray()
