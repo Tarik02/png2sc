@@ -2,28 +2,68 @@
 # Original from https://github.com/royale-proxy/
 # Rewritten by Xset
 
-import sys
 import os
-import random
-import struct
+import sys
 import lzma
+import struct
+import random
+import sqlite3
+import urllib3
+import binascii
 
-from PIL import Image
 from modules import *
+from PIL import Image
 
+# Folders
 folder = './decompile/'
 folder_export = './decompiled/'
 
+# Set OFF SSL warnings (because we will download from github)
+urllib3.disable_warnings()
+
 def _(message):
-    print(u"[DEBUG] %s" % message)
+    print(u"[RELEASE] %s" % message)
+
+# Latest database
+def downloadDB():
+    http = urllib3.PoolManager()
+    
+    _('Downloading the latest database...')
+    response = http.request('GET', 'http://github.com/Xset-s/png2sc/raw/master/PixelData.db')
+    database = response.data
+    _('The latest database successfully downloaded.' + "\n")
+
+    dbFile = open("PixelData.db", "wb+")
+    dbFile.write(database)
+    dbFile.close()
+
+if not os.path.exists('PixelData.db'):
+    downloadDB()
+
+# Database connection
+dbcon = sqlite3.connect("PixelData.db")
+dbcon.isolation_level = None
+dbcur = dbcon.cursor()
+dbcon.row_factory = sqlite3.Row
+dbcon.text_factory = str
+
+def checkAlreadyExists(filename):
+    dbcur.execute('select * from PixelType where filename = ?', [filename])
+    rrf = dbcur.fetchone()
+    
+    if rrf is None:
+        return None
+    
+    return 1
 
 def convert_pixel(pixel, type):
     if type == 0:
         # RGB8888
         return struct.unpack('4B', pixel)
     elif type == 2:
-        # RGB4444
+        # RGB4444        
         pixel, = struct.unpack('<H', pixel)
+        #print(pixel)
         return (((pixel >> 12) & 0xF) << 4, ((pixel >> 8) & 0xF) << 4,
                 ((pixel >> 4) & 0xF) << 4, ((pixel >> 0) & 0xF) << 4)
     elif type == 4:
@@ -48,16 +88,19 @@ for file_d in files:
     if file_d.endswith('_tex.sc'):
         with open(folder + file_d, 'rb') as fh:
             data = fh.read()
-            print(data[:26])
+            
+            # Header
+            header = data[:26]
+            
             data = data[26:]
             data = data[0:9] + (b'\x00' * 4) + data[9:]
-
+            
             # LZMA Decompression
             _( 'Decompressing data...' )
             decompressed = lzma.LZMADecompressor().decompress(data)
-            _( 'Decompressing OK' )
-
-            _( 'Creating picture' )
+            _( 'Decompressing OK' + "\n" )
+            
+            _( 'Creating picture...' )
             i = 0
             picCount = 0
 
@@ -71,6 +114,7 @@ for file_d in files:
                 height, = struct.unpack('<H', decompressed[i + 8:i + 10])
                 
                 i += 10
+                
                 if subType == 0:
                     pixelSize = 4
                 elif subType == 2 or subType == 4 or subType == 6:
@@ -79,18 +123,23 @@ for file_d in files:
                     pixelSize = 1
                 else:
                     raise Exception("Unknown pixel type {}.".format(subType))
+                
+                if checkAlreadyExists(baseName) is None:
+                    _('Writing data in database...')
+                    dbcur.execute('INSERT INTO PixelType (filename, pixel, hexsc) values (?, ?, ?)', [baseName, subType, binascii.hexlify(header)])
+                    _('Data successfully written' + "\n")
 
-                _('About: fileType {}, fileSize: {}, subType: {}, width: {}, '
-                      'height: {}'.format(fileType, fileSize, subType, width, height))
-
+                _('About: fileName {}, fileType {}, fileSize: {}, subType: {}, width: {}, height: {}'.format(file_d, fileType, fileSize, subType, width, height))
+                
                 img = Image.new("RGBA", (width, height))
                 
                 pixels = []
                 for y in range(height):
                     for x in range(width):
+                        #print(str(convert_pixel(decompressed[i:i + pixelSize], subType)))
                         pixels.append(convert_pixel(decompressed[i:i + pixelSize], subType))
                         i += pixelSize
-                        
+                
                 img.putdata(pixels)
                 if fileType == 28 or fileType == 27:
                     imgl = img.load()
@@ -118,7 +167,7 @@ for file_d in files:
                         for h in range(width % 32):
                             imgl[h + (width - (width % 32)), j + (height - (height % 32))] = pixels[iSrcPix]
                             iSrcPix += 1
-
+                
                 _( "Saving as png..." )
                 img.save(folder_export + baseName + ('_' * picCount) + '.png', 'PNG')
                 picCount += 1
