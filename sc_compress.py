@@ -2,8 +2,12 @@
 # Author: Xset
 
 import os
-import struct
 import lzma
+import math
+import struct
+import sqlite3
+import urllib3
+import binascii
 
 from PIL import Image,  ImageDraw
 from modules import *
@@ -11,15 +15,49 @@ from modules import *
 compileDir = './compile/'
 compiledDir = './compiled/'
 
-headerBytes = b'SC\x00\x00\x00\x01\x00\x00\x00\x100\\c\x95\x01@E\xf0\xb1\xc2\xa6\xf4\x08Kkk'
+# Set OFF SSL warnings (because we will download from github)
+urllib3.disable_warnings()
 
 toCompile = os.listdir(compileDir)
 
-def __():
-    print("")
-    
 def _(message):
-    print(u"[DEBUG] %s" % message)
+    print(u"[RELEASE] %s" % message)
+
+# Latest database
+def downloadDB():
+    http = urllib3.PoolManager()
+    
+    _('Downloading the latest database...')
+    response = http.request('GET', 'http://github.com/Xset-s/png2sc/raw/master/PixelData.db')
+    database = response.data
+    _('The latest database successfully downloaded.')
+    print('')
+
+    dbFile = open("PixelData.db", "wb+")
+    dbFile.write(database)
+    dbFile.close()
+
+if not os.path.exists('PixelData.db'):
+    downloadDB()
+
+# Database connection
+dbcon = sqlite3.connect("PixelData.db")
+dbcon.isolation_level = None
+dbcur = dbcon.cursor()
+dbcon.row_factory = sqlite3.Row
+dbcon.text_factory = str
+
+def checkAlreadyExists(filename):
+    dbcur.execute('select * from PixelType where filename = ?', [filename])
+    rrf = dbcur.fetchone()
+    
+    if rrf is None:
+        return None
+    
+    return rrf
+
+def float2int(flt):
+    return int(math.ceil(flt))
 
 for file in toCompile:
     baseName, ext = os.path.splitext(os.path.basename(file))
@@ -39,15 +77,22 @@ for file in toCompile:
         # Size
         packetSize = ((width) * (height) * BFPXFormat) + 5;
         _('PacketSize: ' + str(packetSize))
-        __()
+        print('')
+
+        # Get data from database
+        data = checkAlreadyExists(baseName)
         
+        if not data is None:
+            subType = data[1]
+            headerBytes = binascii.unhexlify(data[2])
+            
         # Create new packet
         p = ByteArray()
 
         # Формируем пакет
         p.writeByte(1)
         p.writeUnsignedInt(packetSize)
-        p.writeByte(0)
+        p.writeByte(subType)
         p.writeUnsignedShort(width)
         p.writeUnsignedShort(height)
         
@@ -60,19 +105,30 @@ for file in toCompile:
         _( 'Saving _tex.sc...' )
         
         for y in range(0, height):
-            for x in range(0, width):  
+            for x in range(0, width):
+
+                # Get Pixel
                 c = image.getpixel((x, y))
-                
+                    
                 r = c[0]
                 g = c[1]
                 b = c[2]
                 a = c[3]
-                
-                cModule.write(struct.pack('<B', r))
-                cModule.write(struct.pack('<B', g))
-                cModule.write(struct.pack('<B', b))
-                cModule.write(struct.pack('<B', a))
 
+                # Write pixel in file
+                if subType == 0:                    
+                    cModule.write(struct.pack('4B', r, g, b, a))
+                # RGB4444
+                elif subType == 2:
+                    pack = 0
+                    
+                    pack += int(a / 0x11) 
+                    pack += int(b / 0x11) << 4                         
+                    pack += int(g / 0x11) << 8
+                    pack += int(r / 0x11) << 12
+
+                    cModule.write(struct.pack('<H', val))
+                    
         cModule.close()
 
         _( 'Compressing data...' )
@@ -81,7 +137,6 @@ for file in toCompile:
 
         os.remove('temp.tex_sc')
         os.rename('temp_.tex_sc', 'temp.tex_sc')
-        
         
         # Module with LZMA
         with open('temp.tex_sc', 'rb') as lz:
@@ -99,5 +154,3 @@ for file in toCompile:
             lz.close()
 
             os.remove("temp.tex_sc")
-            
-            
