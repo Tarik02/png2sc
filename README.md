@@ -1,5 +1,5 @@
 <strong>Warning:</strong> I recommend to use python 3.5.
-<h2>Py2SC 1.0.2</h2>
+<h2>Py2SC 1.0.4</h2>
 <p>Run with (compress files):</p>
 <pre>
 python sc_compress.py
