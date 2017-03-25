@@ -2,6 +2,9 @@
 
 from struct import *
 
+def _(message):
+    print(u"[RELEASE] %s" % message)
+
 class ByteArray:
     def __init__(self, bytes=b""):
         self.bytes = bytes
@@ -16,6 +19,11 @@ class ByteArray:
         self.count += 1
         self.bytes += pack('<B', int(value))
         return self
+
+    def write4Bytes(self, b, bb, bbb, bbbb):
+        self.count += 4
+        self.bytes += pack('4B', b, bb, bbb, bbbb)
+        #return self
 
     def writeShort(self, value):
         self.count += 1
