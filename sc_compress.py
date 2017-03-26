@@ -108,7 +108,7 @@ def bytes2file(bytes, fileName):
     handler.write(bytes)
     handler.close()
 
-def writeImage(file, baseName, fileName):
+def writeImage(file, baseName, fileName, pp = 1):
     _("Collecting information...")
 
     # Open image
@@ -138,6 +138,8 @@ def writeImage(file, baseName, fileName):
         BFPXFormat = 4
     elif subType == 2 or subType == 4 or subType == 6:
         BFPXFormat = 2
+    elif subType == 10:
+        BFPXFormat = 1
     else:
         _("Unknown pixel type %s" % (subType))
         sys.exit(0)
@@ -218,13 +220,12 @@ def writeImage(file, baseName, fileName):
                 p.WUnsignedShort(val)
                 
             elif subType == 4: # RGB565 to RGB8888
-                val = 0
-                
-                blue = (b >> 3)
-                green = (g >> 2) << 5
-                red = (r >> 3) << 11
 
-                val = blue + green + red
+                red = (r >> 3) << 11
+                green = (g >> 2) << 5
+                blue = b >> 3
+
+                val = blue | green | red
                 p.WUnsignedShort(val)
 
             elif subType == 6: # RGB555 to RGB8888
@@ -237,7 +238,12 @@ def writeImage(file, baseName, fileName):
                 
                 p.WUnsignedShort(val)
 
-    if fileName.endswith("__.tex.sc"):
+            elif subType == 10:
+                val = b | g | r
+
+                p.WUnsignedByte(val)
+    #_(fileName)
+    if fileName.endswith((pp * "_") + "tex.sc"):
         # End :c
         p.WByte(0)
         p.WByte(0)
@@ -303,7 +309,7 @@ for dirName in findFiles:
         # If we will compile 2 files in one
         if not dirName == compileDir:            
             fileName = "temp_" + ("_" * picCount) + "tex.sc"
-            writeImage(file, baseName, fileName)
+            writeImage(file, baseName, fileName, len(findFiles[dirName]))
 
             picCount += 1
 
@@ -322,8 +328,6 @@ for dirName in findFiles:
         elif file.endswith("png"):
             
             fileName = "temp_tex.sc"
-            writeImage(file, writeImage, fileName)
-
-            _(baseName)
+            writeImage(file, baseName, fileName)
+            
             compressLZMA(baseName)
-            os.remove("temp.tex.sc")
