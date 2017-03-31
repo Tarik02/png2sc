@@ -256,7 +256,7 @@ def writeImage(file, baseName, fileName, pp = 1):
 def compressLZMA(fileName):
     _("Saving as sprite...")
     
-    result = subprocess.run(["lzma.exe", "e", "temp_tex.sc", "temp_.tex_sc"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    result = subprocess.call(["lzma.exe", "e", "temp_tex.sc", "temp_.tex_sc"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     try:
         result.check_returncode()
     except:
